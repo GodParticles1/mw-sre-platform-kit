@@ -1,0 +1,26 @@
+apiVersion: sre.middleware/v1alpha1
+kind: Probe
+metadata:
+  name: south-health
+spec:
+  service: south
+  safety: readOnly
+  collectors:
+    - name: process-and-port
+      executor: command
+      command: "monit summary | egrep -i 'xbroker.v2|xacquisition|xsouth|xpm2' || true; ss -lntup | egrep ':6000|:6001|:16000|:6700|:26700|:8020' || true"
+    - name: push-log
+      executor: command
+      command: "tail -n 300 /opt/log/xbroker.v2.log | egrep -i 'PushValue|PushEvent|success|ERROR|WARN|panic|refused|timeout' | tail -100 || true"
+    - name: stderr-time
+      executor: command
+      command: "stat /opt/log/xbroker.v2.stderr.log 2>/dev/null || true"
+  rules:
+    - id: south.db_vip_down
+      when: "push-log contains '10.225.20.22:3306'"
+      severity: critical
+      summary: "South service is failing because DB VIP is unavailable."
+    - id: south.push_success
+      when: "push-log contains 'PushValue' && push-log contains 'success'"
+      severity: ok
+      summary: "South data push is active."

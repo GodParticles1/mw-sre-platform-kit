@@ -1,0 +1,29 @@
+apiVersion: sre.middleware/v1alpha1
+kind: Probe
+metadata:
+  name: redis-replication
+spec:
+  service: redis
+  safety: readOnly
+  timeoutSeconds: 5
+  collectors:
+    - name: redis-info-replication
+      executor: command
+      command: "redis-cli -h 127.0.0.1 -p 6379 -a '${REDIS_PASS}' --no-auth-warning INFO replication"
+  parsers:
+    - type: keyValue
+      separator: ':'
+      fields: [role, master_host, master_port, master_link_status, connected_slaves]
+  rules:
+    - id: redis.noauth
+      when: "stdout contains 'NOAUTH'"
+      severity: warning
+      summary: "Redis requires authentication."
+    - id: redis.both_master
+      when: "cluster.count(role == 'master') > 1 && cluster.sum(connected_slaves) == 0"
+      severity: critical
+      summary: "Both Redis nodes are master and replication is broken."
+    - id: redis.slave_link_down
+      when: "role == 'slave' && master_link_status != 'up'"
+      severity: critical
+      summary: "Redis slave link is down."

@@ -1,0 +1,36 @@
+apiVersion: sre.middleware/v1alpha1
+kind: Runbook
+metadata:
+  name: mongo-replset-slave
+spec:
+  service: mongo
+  riskLevel: medium
+  defaultMode: dryRun
+  requiresApproval: true
+  precheck:
+    - probe: mongo-replset
+    - assert: "primary.rsName != ''"
+  backup:
+    files:
+      - host: "{{ targetHost }}"
+        path: /etc/mongod.conf
+  dryRun:
+    summary:
+      - "Enable replication.replSetName={{ rsName }} on {{ targetHost }}."
+      - "Restart MongoDB and verify SECONDARY health=1."
+  apply:
+    steps:
+      - type: filePatch
+        host: "{{ targetHost }}"
+        path: /etc/mongod.conf
+        yamlPatch:
+          replication.replSetName: "{{ rsName }}"
+      - type: restart
+        host: "{{ targetHost }}"
+        serviceCandidates: [tools_mongodb, mongod]
+  verify:
+    - probe: mongo-replset
+    - assert: "member(targetHost).stateStr in ['SECONDARY','RECOVERING','STARTUP2']"
+  rollback:
+    restoreBackups: true
+    restartService: tools_mongodb

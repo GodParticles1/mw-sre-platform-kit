@@ -1,0 +1,37 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: mw-sre-diagnostic-
+spec:
+  entrypoint: diagnose
+  arguments:
+    parameters:
+      - name: profile
+        value: xbrother-ha
+      - name: modules
+        value: all
+  templates:
+    - name: diagnose
+      dag:
+        tasks:
+          - name: collect
+            template: mwctl
+            arguments:
+              parameters:
+                - name: command
+                  value: "collect --profile {{workflow.parameters.profile}}"
+          - name: summarize
+            dependencies: [collect]
+            template: mwctl
+            arguments:
+              parameters:
+                - name: command
+                  value: "check --module {{workflow.parameters.modules}} --json"
+    - name: mwctl
+      inputs:
+        parameters:
+          - name: command
+      container:
+        image: registry.example.com/sre/mwctl:latest
+        command: ["/bin/sh", "-lc"]
+        args: ["mwctl {{inputs.parameters.command}}"]

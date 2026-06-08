@@ -1,0 +1,16 @@
+apiVersion: sre.middleware/v1alpha1
+kind: Probe
+metadata:
+  name: ssdb-health
+spec:
+  service: ssdb
+  safety: readOnly
+  collectors:
+    - name: ssdb-port
+      executor: tcp
+      endpoint: "127.0.0.1:8888"
+  rules:
+    - id: ssdb.port_down
+      when: "tcp failed"
+      severity: critical
+      summary: "SSDB 8888 is not reachable. xhouse may fail."

@@ -1,0 +1,27 @@
+apiVersion: sre.middleware/v1alpha1
+kind: Probe
+metadata:
+  name: mongo-replset
+spec:
+  service: mongo
+  safety: readOnly
+  timeoutSeconds: 5
+  collectors:
+    - name: rs-status
+      executor: mongoEval
+      command: |
+        rs.status().members.forEach(function(m){
+          print(m.name + " state=" + m.stateStr + " health=" + m.health + " msg=" + (m.lastHeartbeatMessage || ""))
+        })
+    - name: repl-config
+      executor: command
+      command: "grep -nE 'replication|replSetName' /etc/mongod.conf || true"
+  rules:
+    - id: mongo.not_running_with_replset
+      when: "stdout contains 'not running with --replSet'"
+      severity: critical
+      summary: "A member is reachable on TCP but mongod is not running in replica set mode."
+    - id: mongo.member_unhealthy
+      when: "stdout contains 'health=0'"
+      severity: critical
+      summary: "A Mongo replica set member is unhealthy."

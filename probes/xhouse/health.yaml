@@ -1,0 +1,23 @@
+apiVersion: sre.middleware/v1alpha1
+kind: Probe
+metadata:
+  name: xhouse-health
+spec:
+  service: xhouse
+  safety: readOnly
+  collectors:
+    - name: ports
+      executor: command
+      command: "ss -lntup | egrep ':9700|:5101|:19700|:8888|:8123|:9000' || true"
+    - name: logs
+      executor: command
+      command: "tail -n 200 /opt/log/xhouse.log | egrep -i 'ERROR|WARN|panic|ssdb|clickhouse|bucket|flow_control|timeout|deadline' | tail -120 || true"
+  rules:
+    - id: xhouse.port_9700_down
+      when: "ports does not contain ':9700'"
+      severity: critical
+      summary: "xhouse main port 9700 is down."
+    - id: xhouse.ssdb_dependency_down
+      when: "logs contains 'ssdb' && ssdb.port_down"
+      severity: critical
+      summary: "xhouse may be blocked by SSDB dependency."

@@ -1,0 +1,33 @@
+apiVersion: sre.middleware/v1alpha1
+kind: Probe
+metadata:
+  name: clickhouse-cluster
+spec:
+  service: clickhouse
+  safety: readOnly
+  collectors:
+    - name: local-select
+      executor: http
+      url: "http://127.0.0.1:8123/?query=SELECT%201"
+    - name: system-clusters
+      executor: clickhouse
+      sql: |
+        SELECT cluster, shard_num, replica_num, host_name, host_address, port, is_local
+        FROM system.clusters
+        ORDER BY cluster, shard_num, replica_num
+    - name: remote-config
+      executor: command
+      command: "grep -RniI 'remote_servers\\|cluster\\|shard\\|replica\\|host\\|port\\|macros\\|keeper\\|zookeeper' /etc/clickhouse-server /opt 2>/dev/null | head -200"
+  rules:
+    - id: clickhouse.master_down
+      when: "local_select failed"
+      severity: critical
+      summary: "Local ClickHouse cannot answer SELECT 1."
+    - id: clickhouse.cluster_missing_master
+      when: "system.clusters does not contain expected master endpoint"
+      severity: critical
+      summary: "Cluster view does not include the master member."
+    - id: clickhouse.remote_unreachable
+      when: "clusterAllReplicas fails"
+      severity: critical
+      summary: "Cluster metadata exists but remote replicas are unreachable."

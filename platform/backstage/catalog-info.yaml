@@ -1,0 +1,12 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: mw-sre-platform
+  title: Middleware SRE Diagnostic Platform
+  description: Generic middleware diagnosis and remediation platform with Probe-as-Code and Runbook-as-Code.
+  annotations:
+    backstage.io/techdocs-ref: dir:.
+spec:
+  type: service
+  lifecycle: experimental
+  owner: sre-platform

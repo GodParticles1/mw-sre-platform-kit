@@ -1,0 +1,21 @@
+apiVersion: sre.middleware/v1alpha1
+kind: Runbook
+metadata:
+  name: mysql-replication-diagnose
+spec:
+  service: mysql
+  riskLevel: readOnly
+  defaultMode: dryRun
+  requiresApproval: false
+  purpose: "Diagnose server_id collision, missing binlog, access denied and thread down issues."
+  precheck:
+    - probe: mysql-replication
+  decisionTree:
+    - if: "Last_IO_Error contains 'equal MySQL server ids'"
+      then: "Fix replica server-id after backup; restart replica mysqld; restart slave thread."
+    - if: "Last_IO_Error contains '1236'"
+      then: "Do not auto reset; require data-risk confirmation and align to source current SHOW MASTER STATUS."
+    - if: "Access denied"
+      then: "Check replication user grants and host pattern."
+    - if: "Slave_SQL_Running == No"
+      then: "Inspect Last_SQL_Error; do not skip error automatically without approval."

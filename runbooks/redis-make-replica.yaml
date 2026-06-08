@@ -1,0 +1,41 @@
+apiVersion: sre.middleware/v1alpha1
+kind: Runbook
+metadata:
+  name: redis-make-replica
+spec:
+  service: redis
+  riskLevel: medium
+  defaultMode: dryRun
+  requiresApproval: true
+  precheck:
+    - probe: redis-replication
+    - assert: "targetHost != vipOwner"
+  backup:
+    files:
+      - host: "{{ targetHost }}"
+        path: /etc/redis.conf
+  dryRun:
+    summary:
+      - "Set Redis on {{ targetHost }} as replica of {{ masterIP }}:6379."
+      - "Persist masterauth/requirepass/slaveof in /etc/redis.conf."
+  apply:
+    steps:
+      - type: command
+        host: "{{ targetHost }}"
+        command: "redis-cli -a '{{ redisPass }}' CONFIG SET masterauth '{{ redisPass }}'"
+      - type: command
+        host: "{{ targetHost }}"
+        command: "redis-cli -a '{{ redisPass }}' SLAVEOF {{ masterIP }} 6379"
+      - type: filePatch
+        host: "{{ targetHost }}"
+        path: /etc/redis.conf
+        ensureLines:
+          - "masterauth {{ redisPass }}"
+          - "requirepass {{ redisPass }}"
+          - "slaveof {{ masterIP }} 6379"
+  verify:
+    - probe: redis-replication
+    - assert: "role == 'slave' && master_link_status == 'up'"
+  rollback:
+    restoreBackups: true
+    restartService: tools_redis

@@ -1,0 +1,26 @@
+apiVersion: sre.middleware/v1alpha1
+kind: Probe
+metadata:
+  name: rabbitmq-health
+spec:
+  service: rabbitmq
+  safety: readOnly
+  collectors:
+    - name: tcp-5672
+      executor: tcp
+      endpoint: "${VIP}:5672"
+    - name: rabbitmq-status
+      executor: command
+      command: "rabbitmqctl status"
+    - name: rabbitmq-queues
+      executor: command
+      command: "rabbitmqctl list_queues name messages consumers | head -100"
+  rules:
+    - id: rabbitmq.port_down
+      when: "tcp-5672 failed"
+      severity: critical
+      summary: "RabbitMQ AMQP port is not reachable."
+    - id: rabbitmq.queue_backlog
+      when: "messages high && consumers == 0"
+      severity: warning
+      summary: "Queue backlog without consumers."

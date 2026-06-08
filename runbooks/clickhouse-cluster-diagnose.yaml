@@ -1,0 +1,26 @@
+apiVersion: sre.middleware/v1alpha1
+kind: Runbook
+metadata:
+  name: clickhouse-cluster-diagnose
+spec:
+  service: clickhouse
+  riskLevel: readOnly
+  defaultMode: dryRun
+  requiresApproval: false
+  purpose: "Diagnose master ClickHouse startup failure or slave cluster view not recognizing master."
+  precheck:
+    - probe: clickhouse-cluster
+  decisionTree:
+    - if: "master local SELECT 1 fails"
+      then: "Classify as master_clickhouse_down; inspect clickhouse-server logs before restart."
+    - if: "slave cannot TCP 8123/9000 to master"
+      then: "Classify as network_or_bind_issue; inspect bind_host, firewall, route."
+    - if: "system.clusters missing master"
+      then: "Classify as remote_servers_config_inconsistent."
+    - if: "system.clusters has duplicate replica or wrong host_address"
+      then: "Classify as macros_or_hosts_resolution_issue."
+  verify:
+    - "master SELECT 1 succeeds"
+    - "slave -> master 8123/9000 succeeds"
+    - "system.clusters contains master and slave"
+    - "clusterAllReplicas returns both nodes"

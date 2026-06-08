@@ -1,0 +1,38 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: remediationplans.sre.middleware.io
+spec:
+  group: sre.middleware.io
+  scope: Namespaced
+  names:
+    plural: remediationplans
+    singular: remediationplan
+    kind: RemediationPlan
+    shortNames: [rplan]
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              properties:
+                sourceRun: {type: string}
+                action: {type: string}
+                mode:
+                  type: string
+                  enum: [dryRun, apply]
+                approvalRequired: {type: boolean}
+                parameters:
+                  type: object
+                  x-kubernetes-preserve-unknown-fields: true
+            status:
+              type: object
+              properties:
+                phase: {type: string}
+                planURI: {type: string}
+                riskLevel: {type: string}

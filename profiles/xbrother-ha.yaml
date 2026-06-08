@@ -1,0 +1,41 @@
+apiVersion: sre.middleware/v1alpha1
+kind: Profile
+metadata:
+  name: xbrother-ha
+spec:
+  topology:
+    masterIP: 10.225.20.20
+    slaveIP: 10.225.20.21
+    vip: 10.225.20.22
+    slaveHostAlias: slave
+  defaults:
+    timeoutSeconds: 3
+  credentialsRefs:
+    mysql: secret://mw-sre/xbrother/mysql
+    redis: secret://mw-sre/xbrother/redis
+  services:
+    mysql:
+      vipEndpoint: 10.225.20.22:3306
+      physicalEndpoints:
+        - master.xbrother.com:3306
+        - slave.xbrother.com:3306
+    mongo:
+      replicaSet: xbrother
+      endpoints:
+        - master.xbrother.com:27017
+        - slave.xbrother.com:27017
+    redis:
+      masterWhenVIPOnMaster: 10.225.20.20:6379
+      slaveWhenVIPOnMaster: 10.225.20.21:6379
+    rabbitmq:
+      amqpEndpoint: 10.225.20.22:5672
+    clickhouse:
+      masterHttp: 10.225.20.20:8123
+      masterNative: 10.225.20.20:9000
+    ssdb:
+      localEndpoint: 127.0.0.1:8888
+    xhouse:
+      ports: [9700, 5101, 19700]
+    south:
+      processes: [xbroker.v2, xacquisition_v3r3, xsouth_xbt_mqtt, xsouth_snmp, mqproxy]
+      ports: [6000, 6001, 16000, 6700, 26700, 8020]

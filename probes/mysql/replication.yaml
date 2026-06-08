@@ -1,0 +1,27 @@
+apiVersion: sre.middleware/v1alpha1
+kind: Probe
+metadata:
+  name: mysql-replication
+spec:
+  service: mysql
+  safety: readOnly
+  collectors:
+    - name: mysql-status
+      executor: mysql
+      sql: |
+        SELECT @@hostname,@@server_id,@@read_only,@@log_bin,@@binlog_format;
+        SHOW MASTER STATUS;
+        SHOW SLAVE STATUS\G;
+  rules:
+    - id: mysql.equal_server_id
+      when: "stdout contains 'equal MySQL server ids'"
+      severity: critical
+      summary: "MySQL master and replica have the same server_id."
+    - id: mysql.binlog_missing_1236
+      when: "stdout contains 'fatal error 1236' || stdout contains 'Could not find first log file'"
+      severity: critical
+      summary: "Replica is reading a binlog that no longer exists on source."
+    - id: mysql.slave_thread_down
+      when: "stdout contains 'Slave_IO_Running: No' || stdout contains 'Slave_SQL_Running: No'"
+      severity: critical
+      summary: "MySQL replication thread is not running."
