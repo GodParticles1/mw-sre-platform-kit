@@ -1,0 +1,44 @@
+apiVersion: sre.middleware/v1alpha1
+kind: Runbook
+metadata:
+  name: redis-make-replica-v2
+spec:
+  service: redis
+  riskLevel: L3
+  defaultMode: dryRun
+  requiresApproval: true
+  purpose: "After confirming VIP owner and physical master/slave role, make the non-VIP node replicate from the expected master."
+  precheck:
+    - probe: redis-replication-v2
+    - assert: "targetHost != vipOwner"
+    - assert: "masterIP is physical IP, not guessed peer_ip"
+  backup:
+    files:
+      - host: "{{ targetHost }}"
+        pathCandidates:
+          - /etc/redis.conf
+          - /etc/redis/redis.conf
+          - /opt/data/redis/redis.conf
+          - "{{ HOME }}/opt/data/redis/redis.conf"
+  dryRun:
+    summary:
+      - "Confirm single/dual-node mode, targetHost, masterIP, VIP owner and path prefix."
+      - "Show exact CONFIG SET / SLAVEOF and config file patch without executing."
+  apply:
+    approvalRequired: true
+    steps:
+      - type: command
+        command: "redis-cli CONFIG SET masterauth '{{ redisPass }}'"
+      - type: command
+        command: "redis-cli SLAVEOF {{ masterIP }} 6379"
+      - type: filePatch
+        ensureLines:
+          - "masterauth {{ redisPass }}"
+          - "requirepass {{ redisPass }}"
+          - "slaveof {{ masterIP }} 6379"
+  verify:
+    - probe: redis-replication-v2
+    - assert: "role == 'slave' && master_link_status == 'up'"
+  rollback:
+    restoreBackups: true
+    restartServiceCandidates: [tools_redis, redis]

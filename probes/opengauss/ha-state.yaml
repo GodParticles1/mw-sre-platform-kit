@@ -1,0 +1,25 @@
+apiVersion: sre.middleware/v1alpha1
+kind: Probe
+metadata:
+  name: opengauss-ha-state
+spec:
+  service: opengauss
+  safety: readOnly
+  timeoutSeconds: 5
+  collectors:
+    - name: opengauss.gsctl-query
+      executor: command
+      command: "discover OpenGauss data dir and run gs_ctl query -D"
+    - name: opengauss.process-port
+      executor: command
+      command: "ps and ss/netstat for OpenGauss process and ports"
+    - name: opengauss.log-tail
+      executor: command
+      command: "bounded recent log scan for fatal/error/permission/disk symptoms"
+  rules:
+    - id: opengauss.ha_not_normal
+      severity: critical
+      summary: "OpenGauss HA state is not Normal."
+    - id: opengauss.standby_receiver_missing
+      severity: critical
+      summary: "OpenGauss standby has no receiver information."

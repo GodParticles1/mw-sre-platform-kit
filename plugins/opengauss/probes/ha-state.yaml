@@ -1,0 +1,31 @@
+apiVersion: sre.middleware/v1alpha1
+kind: Probe
+metadata:
+  name: opengauss-ha-state
+spec:
+  service: opengauss
+  safety: readOnly
+  timeoutSeconds: 5
+  collectors:
+    - name: opengauss.gsctl-query
+      executor: command
+      command: "discover data dir from OPENGAUSS_DATA_DIR/RUNTIME_ROOTFS/HOME/common paths, then run gs_ctl query -D"
+    - name: opengauss.process-port
+      executor: command
+      command: "ps and ss/netstat for gaussdb/gs_ctl/gsql and 5432/26000/15432"
+    - name: opengauss.log-tail
+      executor: command
+      command: "bounded tail of recent OpenGauss logs for fatal/error/permission/disk symptoms"
+  rules:
+    - id: opengauss.data_dir_not_found
+      severity: warning
+      summary: "OpenGauss data directory was not found in common paths."
+    - id: opengauss.gs_ctl_missing
+      severity: warning
+      summary: "gs_ctl is not available in the current shell."
+    - id: opengauss.ha_not_normal
+      severity: critical
+      summary: "OpenGauss HA state is not Normal."
+    - id: opengauss.standby_receiver_missing
+      severity: critical
+      summary: "OpenGauss standby has no receiver information."

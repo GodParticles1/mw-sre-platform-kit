@@ -1,0 +1,32 @@
+apiVersion: sre.middleware/v1alpha1
+kind: Runbook
+metadata:
+  name: python-env-profile-cleanup-dryrun
+spec:
+  service: python-env
+  riskLevel: L2
+  defaultMode: dryRun
+  requiresApproval: true
+  purpose: "Safely prepare a profile cleanup plan for driver/Python/Console startup failures."
+  precheck:
+    - probe: python-env-profile
+  backup:
+    files:
+      - /etc/profile
+      - /etc/bashrc
+      - "{{ HOME }}/.bashrc"
+      - "{{ HOME }}/.bash_profile"
+      - "{{ HOME }}/.profile"
+  dryRun:
+    summary:
+      - "Show lines that print output, return non-zero, or pollute PYTHONPATH/LD_LIBRARY_PATH."
+      - "Require customer approval before changing security-baseline variables such as TIMEOUT/TMOUT."
+  apply:
+    approvalRequired: true
+    note: "No automatic profile mutation is implemented in the plugin. Edit manually after backup and review."
+  verify:
+    - "source /etc/profile; echo $? returns 0"
+    - "source /etc/profile produces no unexpected output"
+    - "python3 import smoke test succeeds"
+  rollback:
+    restoreBackups: true

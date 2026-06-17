@@ -1,0 +1,31 @@
+apiVersion: sre.middleware/v1alpha1
+kind: Probe
+metadata:
+  name: redis-replication-v2
+spec:
+  service: redis
+  safety: readOnly
+  timeoutSeconds: 5
+  collectors:
+    - name: redis.info-replication
+      executor: command
+      command: "REDISCLI_AUTH=${REDIS_PASS} redis-cli -h 127.0.0.1 -p 6379 --no-auth-warning INFO replication"
+    - name: redis.process-port
+      executor: command
+      command: "ps -ef | grep -E '[r]edis-server|[r]edis-cli' || true; ss -lntup | grep -E '(:6379|redis)' || true"
+    - name: redis.config-summary
+      executor: command
+      command: "grep redis role/config with requirepass/masterauth masked"
+  rules:
+    - id: redis.noauth
+      severity: warning
+      summary: "Redis requires authentication."
+    - id: redis.port_down
+      severity: critical
+      summary: "Redis local port is not reachable."
+    - id: redis.both_master
+      severity: critical
+      summary: "More than one Redis evidence block appears to be master."
+    - id: redis.slave_link_down
+      severity: critical
+      summary: "Redis replica link is down."

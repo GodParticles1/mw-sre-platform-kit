@@ -54,3 +54,21 @@ mw-sre-platform/
 ```
 
 然后在两个学习仓库里把它作为全年主线项目贯穿。
+
+## v0.2 plugin update
+
+This package includes three platform-aligned plugins without rebuilding the core architecture:
+
+- `redis`: local availability, masked config summary, authentication, master/replica drift and slave-link diagnosis.
+- `opengauss`: data directory discovery, `gs_ctl query` HA state, process/port evidence and bounded log scan.
+- `python-env`: `/etc/profile` source behavior, selected environment, risky profile lines and Python import smoke test.
+
+Example commands:
+
+```bash
+./bin/mwctl check --module redis --redis-pass '***' --json
+./bin/mwctl check --module opengauss --opengauss-data-dir /opt/data/opengauss/data/dn --json
+./bin/mwctl check --module python-env --json
+```
+
+All three plugins are read-only collectors plus deterministic finding rules. Risky repair work is represented as Runbook-as-Code under `plugins/*/runbooks` and `runbooks/`, and remains dry-run/approval-gated.

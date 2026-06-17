@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"os"
 	"os/exec"
 	"time"
 
@@ -32,6 +33,13 @@ func (e *LocalExecutor) Run(ctx context.Context, cmd Command) core.CommandResult
 	}
 
 	c := exec.CommandContext(ctx, cmd.Args[0], cmd.Args[1:]...)
+	if len(cmd.Env) > 0 {
+		env := os.Environ()
+		for k, v := range cmd.Env {
+			env = append(env, k+"="+v)
+		}
+		c.Env = env
+	}
 	var stdout, stderr bytes.Buffer
 	c.Stdout = &stdout
 	c.Stderr = &stderr

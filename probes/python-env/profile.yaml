@@ -1,0 +1,28 @@
+apiVersion: sre.middleware/v1alpha1
+kind: Probe
+metadata:
+  name: python-env-profile
+spec:
+  service: python-env
+  safety: readOnly
+  timeoutSeconds: 5
+  collectors:
+    - name: python-env.profile-source
+      executor: command
+      command: "source /etc/profile, capture exit code and unexpected output, then show selected env and python3 version"
+    - name: python-env.profile-risk-lines
+      executor: command
+      command: "bounded grep of profile files for TIMEOUT/TMOUT/PYTHONPATH/PATH/LD_LIBRARY_PATH/echo/printf/return/exit"
+    - name: python-env.import-smoke
+      executor: command
+      command: "python3 smoke import ssl/sqlite3/ctypes"
+  rules:
+    - id: python_env.profile_source_nonzero
+      severity: critical
+      summary: "/etc/profile returns non-zero when sourced."
+    - id: python_env.profile_source_output
+      severity: warning
+      summary: "/etc/profile prints output when sourced."
+    - id: python_env.import_fail
+      severity: warning
+      summary: "Python standard-library import smoke test failed."

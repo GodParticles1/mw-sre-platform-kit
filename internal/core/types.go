@@ -40,12 +40,12 @@ type CommandResult struct {
 
 // Finding is a normalized diagnostic statement derived from evidence.
 type Finding struct {
-	Service       string   `json:"service"`
-	RuleID        string   `json:"rule_id"`
-	Severity      Severity `json:"severity"`
-	Summary       string   `json:"summary"`
-	Evidence      []string `json:"evidence"`
-	Recommendation string  `json:"recommendation,omitempty"`
+	Service        string   `json:"service"`
+	RuleID         string   `json:"rule_id"`
+	Severity       Severity `json:"severity"`
+	Summary        string   `json:"summary"`
+	Evidence       []string `json:"evidence"`
+	Recommendation string   `json:"recommendation,omitempty"`
 }
 
 // CheckReport is the stable machine-readable output consumed by platform/AIOps.

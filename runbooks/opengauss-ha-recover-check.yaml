@@ -1,0 +1,27 @@
+apiVersion: sre.middleware/v1alpha1
+kind: Runbook
+metadata:
+  name: opengauss-ha-recover-check
+spec:
+  service: opengauss
+  riskLevel: L0
+  defaultMode: dryRun
+  requiresApproval: false
+  purpose: "Classify OpenGauss HA health before upper-layer service recovery."
+  precheck:
+    - probe: opengauss-ha-state
+  decisionTree:
+    - if: "data_dir_not_found"
+      then: "Confirm root/non-root prefix and OPENGAUSS_DATA_DIR before judging database status."
+    - if: "gs_ctl_missing"
+      then: "Source product/database profile or switch runtime user, then re-run read-only check."
+    - if: "db_state != Normal || detail_information != Normal"
+      then: "Inspect sender/receiver and recent logs; do not only restart upper-layer services."
+    - if: "local_role == Standby && receiver missing"
+      then: "Check primary connectivity, sender state, HA config and network."
+  verify:
+    - "gs_ctl query shows db_state: Normal"
+    - "gs_ctl query shows detail_information: Normal"
+    - "Standby has Receiver info when expected"
+  rollback:
+    note: "Read-only runbook has no state changes."

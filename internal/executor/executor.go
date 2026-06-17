@@ -10,6 +10,7 @@ type Command struct {
 	Host    string
 	Args    []string
 	Timeout int
+	Env     map[string]string
 }
 
 type Executor interface {
